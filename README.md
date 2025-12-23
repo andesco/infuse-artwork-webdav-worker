@@ -1,40 +1,197 @@
-# r2-webdav
+# Infuse Artwork WebDAV Server
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/abersheeran/r2-webdav)
+Public WebDAV server hosting custom artwork images for the [Infuse] media player app.
 
-Use Cloudflare Workers to provide a WebDav interface for Cloudflare R2.
+## Purpose
 
-## Usage
+This public WebDAV endpoint serves custom artwork for [Infuse], allowing you to personalize the artwork for categories and favorites. Infuse is a popular media player for Apple TV, iOS, and macOS that supports fetching custom artwork via WebDAV.
 
-Change wrangler.toml to your own.
+## Infuse Documentation
 
-```toml
-[[r2_buckets]]
-binding = 'bucket' # <~ valid JavaScript variable name, don't change this
-bucket_name = 'webdav'
+Using custom artwork with Infuse:
+- [Adding Custom Favorite Artwork (tvOS)](https://support.firecore.com/hc/en-us/articles/360003185773-Adding-Custom-Favorite-Artwork-tvOS)
+- [Overriding Artwork and Metadata](https://support.firecore.com/hc/en-us/articles/4405042929559-Overriding-Artwork-and-Metadata)
+
+## Images Hosted
+
+- `cast.png`
+- `cast-atv.png`
+- `dmmcast.png`
+- `dmmcast-atv.png`
+- `favorite.png`
+- `favorite-atv.png`
+- `link.png`
+- `link-atv.png`
+- `orange-cast-on-black.png`
+- `orange-cast-on-black-atv.png`
+
+## Using with Infuse
+
+### Adding as a Network Share
+
+1. Settings → Shares → Add Share → WebDAV
+2. Server: \
+`https://artwork.andrewe.dev` or \ `https://infuse-artwork-webdav.andrewe.workers.dev`
+3. Advanced: Auto Scan: Off
+4. Save
+
+## Deployment
+
+- built on [r2-webdav] a WebDAV server implementation for Cloudflare Workers and R2
+
+### Prerequisites
+
+- [Wrangler CLI] installed
+- Cloudflare account with Workers and R2 enabled
+- Node.js 18+ and npm
+
+### Initial Setup
+
+```bash
+git clone https://github.com/abersheeran/r2-webdav.git infuse-artwork-webdav-worker
+cd infuse-artwork-webdav-worker
+npm install
+wrangler r2 bucket create infuse-artwork
 ```
 
-Then use wrangler to deploy.
+### Configuration
+
+Update `wrangler.toml`:
+```toml
+name = "infuse-artwork-webdav"
+main = "src/index.ts"
+compatibility_date = "2025-12-22"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+# Custom domain (auto-creates DNS)
+routes = [
+  { pattern = "artwork.andrewe.dev", custom_domain = true }
+]
+
+[[r2_buckets]]
+binding = "bucket"
+bucket_name = "infuse-artwork"
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+```
+
+### Deploy
 
 ```bash
 wrangler deploy
+```
 
-wrangler secret put USERNAME
-wrangler secret put PASSWORD
+## Managing Images
+
+### Upload Images to R2 bucket
+
+> [!Important]
+> Always use the `--remote` flag to upload to the production R2 bucket (not to local development storage).
+
+upload a single image:
+```bash
+wrangler r2 object put infuse-artwork/filename.png \
+  --file=./filename.png \
+  --content-type=image/png \
+  --remote
+```
+
+upload multiple images:
+
+```bash
+for file in *.png; do
+  echo "Uploading $file..."
+  wrangler r2 object put "infuse-artwork/$file" \
+    --file="$file" \
+    --content-type=image/png \
+    --remote
+done
+```
+
+### Delete Images
+
+```bash
+wrangler r2 object delete infuse-artwork/filename.png --remote
 ```
 
 ## Development
 
-With `wrangler`, you can build, test, and deploy your Worker with the following commands:
+### Local Development
 
-```sh
-# run your Worker in an ideal development workflow (with a local server, file watcher & more)
-$ npm run dev
-
-# deploy your Worker globally to the Cloudflare network (update your wrangler.toml file for configuration)
-$ npm run deploy
+```bash
+npm run dev
 ```
 
-## Test
+### Testing
 
-Use [litmus](https://github.com/notroj/litmus) to test.
+```bash
+# test HTML directory listing:
+curl https://infuse-artwork-webdav.andrewe.workers.dev/
+# test specific image:
+curl -I https://infuse-artwork-webdav.andrewe.workers.dev/cast.png
+# test WebDAV PROPFIND:
+curl -X PROPFIND https://infuse-artwork-webdav.andrewe.workers.dev/ \
+  -H "Depth: 1" \
+  -H "Content-Type: text/xml" \
+  --data '<?xml version="1.0"?><propfind xmlns="DAV:"><prop><resourcetype/><getcontentlength/><getlastmodified/></prop></propfind>'
+# verify write protection (401):
+curl -X PUT https://infuse-artwork-webdav.andrewe.workers.dev/test.txt \
+  -H "Content-Type: text/plain" \
+  --data "test"
+```
+
+## Security Model
+
+**publicly accessible** without authentication: `GET` `HEAD` `PROPFIND` `OPTIONS`
+
+**require authentication**: `PUT` `DELETE` `MKCOL` `COPY`
+ `MOVE` `PROPPATCH`
+
+> [!NOTE]
+> Since no credentials are configured, all write operations will return `401 Unauthorized` .
+
+## Technical Details
+
+### WebDAV Implementation
+
+- **protocol**: WebDAV Class 1, 3
+- **hosting**: Cloudflare Workers
+- **storage**: Cloudflare R2
+- **framework**: [r2-webdav]
+
+### Modifications from Original
+
+This deployment includes a modification to [r2-webdav] to enable public read-only access:
+
+**File**: `src/index.ts`
+
+```typescript
+// Allow public read-only access (GET, HEAD, PROPFIND)
+// Require authentication for write operations
+const readOnlyMethods = ['OPTIONS', 'GET', 'HEAD', 'PROPFIND'];
+const requiresAuth = !readOnlyMethods.includes(request.method);
+
+if (
+  requiresAuth &&
+  !is_authorized(request.headers.get('Authorization') ?? '', env.USERNAME, env.PASSWORD)
+) {
+  return new Response('Unauthorized', {
+    status: 401,
+    headers: {
+      'WWW-Authenticate': 'Basic realm="webdav"',
+    },
+  });
+}
+```
+
+## License
+
+Based on abersheeran/[r2-webdav].
+
+[Infuse]: https://firecore.com/infuse
+[r2-webdav]: https://github.com/abersheeran/r2-webdav
+[Wrangler CLI]: https://developers.cloudflare.com/workers/wrangler/
+
