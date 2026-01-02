@@ -6,7 +6,7 @@ workers_dev = true
 
 # Custom domain (auto-creates DNS)
 routes = [
-  { pattern = "artwork.andrewe.dev", custom_domain = true }
+  { pattern = "infuse-artwork.andrewe.dev", custom_domain = true }
 ]
 
 # Bind an R2 Bucket. Use R2 to store arbitrarily large blobs of data, such as files.

@@ -2,7 +2,7 @@
 	"name": "infuse-artwork-webdav-worker",
 	"version": "1.0.0",
 	"description": "Public WebDAV server hosting custom artwork images for Infuse",
-	"homepage": "https://artwork.andrewe.dev",
+	"homepage": "https://infuse-artwork.andrewe.dev",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/andesco/infuse-artwork-webdav-worker.git"

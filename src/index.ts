@@ -185,7 +185,7 @@ async function handle_get(request: Request, bucket: R2Bucket): Promise<Response>
 		} else {
 			// Show WebDAV and GitHub links on root page
 			page += `<div class="info-links">
-				<div class="info-link"><a href="webdavs://artwork.andrewe.dev/"><code>webdavs://artwork.andrewe.dev/</code></a></div>
+				<div class="info-link"><a href="webdavs://infuse-artwork.andrewe.dev/"><code>webdavs://infuse-artwork.andrewe.dev/</code></a></div>
 				<div class="info-link"><a href="https://github.com/andesco/infuse-artwork-webdav-worker" target="_blank"><code>https://github.com/andesco/infuse-artwork-webdav-worker</code></a></div>
 			</div>`;
 		}

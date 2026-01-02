@@ -1,5 +1,5 @@
 <h1 align="center">
-  Infuse Artwork WebDAV Server<br /><a href="https://artwork.andrewe.dev">artwork.andrewe.dev</a>
+  Infuse Artwork WebDAV Server<br /><a href="https://infuse-artwork.andrewe.dev">infuse-artwork.andrewe.dev</a>
 </h1>
 
 This public WebDAV endpoint serves custom artwork for [Infuse], allowing you to personalize the artwork for categories and favorites. Infuse is a popular media player for Apple TV, iOS, and macOS that supports fetching custom artwork via WebDAV.
@@ -21,7 +21,7 @@ Using custom artwork with Infuse:
 
 1. Settings → Shares → Add Share → WebDAV
 2. Server: \
-`https://artwork.andrewe.dev` or \ `https://infuse-artwork-webdav.andrewe.workers.dev`
+`https://infuse-artwork.andrewe.dev` or \ `https://infuse-artwork-webdav.andrewe.workers.dev`
 3. Advanced: Auto Scan: Off
 4. Save
 
@@ -57,7 +57,7 @@ workers_dev = true
 
 # Custom domain (auto-creates DNS)
 routes = [
-  { pattern = "artwork.andrewe.dev", custom_domain = true }
+  { pattern = "infuse-artwork.andrewe.dev", custom_domain = true }
 ]
 
 [[r2_buckets]]
