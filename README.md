@@ -118,7 +118,9 @@ rclone sync infuse-artwork/ r2:infuse-artwork -v
 
 > [!Note]
 > `rclone sync` makes the R2 bucket identical to your local folder - it will **delete** files in R2 that do not exist locally. Use the `--dry-run` flag to see what will change when syncing:
-> `rclone sync infuse-artwork/ r2:infuse-artwork --dry-run -v`
+> ```
+> rclone sync infuse-artwork/ r2:infuse-artwork --dry-run -v
+> ```
 
 ### Upload Images with Wrangler
 
@@ -145,7 +147,7 @@ for file in *.png; do
 done
 ```
 
-### Delete Images
+delete images:
 
 ```bash
 wrangler r2 object delete infuse-artwork/filename.png --remote
