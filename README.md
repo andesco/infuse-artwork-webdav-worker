@@ -4,7 +4,10 @@
 
 This public WebDAV endpoint serves custom artwork for [Infuse], allowing you to personalize the artwork for categories and favorites. Infuse is a popular media player for Apple TV, iOS, and macOS that supports fetching custom artwork via WebDAV.
 
-{images}
+<p align="center">
+  <img src="https://artwork.andrewe.dev/cast-atv.png" alt="Cast artwork" width="200" />
+  <img src="https://artwork.andrewe.dev/link-atv.png" alt="Link artwork" width="200" />
+</p>
 
 ## Infuse Documentation
 
