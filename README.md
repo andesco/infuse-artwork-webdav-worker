@@ -1,29 +1,16 @@
-# Infuse Artwork WebDAV Server
-
-Public WebDAV server hosting custom artwork images for the [Infuse] media player app.
-
-## Purpose
+<h1 align="center">
+  Infuse Artwork WebDAV Server<br /><a href="https://artwork.andrewe.dev">artwork.andrewe.dev</a>
+</h1>
 
 This public WebDAV endpoint serves custom artwork for [Infuse], allowing you to personalize the artwork for categories and favorites. Infuse is a popular media player for Apple TV, iOS, and macOS that supports fetching custom artwork via WebDAV.
+
+{images}
 
 ## Infuse Documentation
 
 Using custom artwork with Infuse:
 - [Adding Custom Favorite Artwork (tvOS)](https://support.firecore.com/hc/en-us/articles/360003185773-Adding-Custom-Favorite-Artwork-tvOS)
 - [Overriding Artwork and Metadata](https://support.firecore.com/hc/en-us/articles/4405042929559-Overriding-Artwork-and-Metadata)
-
-## Images Hosted
-
-- `cast.png`
-- `cast-atv.png`
-- `dmmcast.png`
-- `dmmcast-atv.png`
-- `favorite.png`
-- `favorite-atv.png`
-- `link.png`
-- `link-atv.png`
-- `orange-cast-on-black.png`
-- `orange-cast-on-black-atv.png`
 
 ## Using with Infuse
 
@@ -42,13 +29,14 @@ Using custom artwork with Infuse:
 ### Prerequisites
 
 - [Wrangler CLI] installed
+- [rclone] installed (`brew install rclone`)
 - Cloudflare account with Workers and R2 enabled
 - Node.js 18+ and npm
 
 ### Initial Setup
 
 ```bash
-git clone https://github.com/abersheeran/r2-webdav.git infuse-artwork-webdav-worker
+git clone https://github.com/andesco/infuse-artwork-webdav-worker.git
 cd infuse-artwork-webdav-worker
 npm install
 wrangler r2 bucket create infuse-artwork
@@ -86,7 +74,50 @@ wrangler deploy
 
 ## Managing Images
 
-### Upload Images to R2 bucket
+### Sync Local Folder to R2
+
+Use rclone for true synchronization (handles adds, updates, deletes, and renames):
+
+#### Setup rclone (one-time)
+
+1. Get your Cloudflare Account ID:
+   ```bash
+   wrangler whoami
+   ```
+
+2. Create R2 API credentials:
+   - Cloudflare Dashboard → R2 → Overview  → [Manage R2 API Tokens](https://dash.cloudflare.com/?to=/:account/r2/api-tokens) → Create API Token
+   - Permissions: Admin Read & Write
+   - Copy: **Access Key ID** and **Secret Access Key**
+
+3. Configure rclone:
+   ```bash
+   rclone config
+   ```
+
+   Follow the prompts:
+   - `n` for new remote
+   - Name: `r2`
+   - Storage: Amazon S3 compatible
+   - Provider: `Cloudflare`
+   - Access Key ID: [paste from step 2]
+   - Secret Access Key: [paste from step 2]
+   - Region: `auto`
+   - Endpoint: `https://{ACCOUNT_ID}.r2.cloudflarestorage.com`
+   - ACL: `private`
+   - accept defaults for remaining options
+
+#### Sync folder to R2
+
+```bash
+rclone sync infuse-artwork/ r2:infuse-artwork -v
+```
+
+> [!Note]
+> `rclone sync` makes the R2 bucket identical to your local folder - it will **delete** files in R2 that do not exist locally. Use the `--dry-run` flag to see what will change when syncing:
+> `rclone sync infuse-artwork/ r2:infuse-artwork --dry-run -v`
+
+### Upload Images with Wrangler
 
 > [!Important]
 > Always use the `--remote` flag to upload to the production R2 bucket (not to local development storage).
@@ -194,4 +225,5 @@ Based on abersheeran/[r2-webdav].
 [Infuse]: https://firecore.com/infuse
 [r2-webdav]: https://github.com/abersheeran/r2-webdav
 [Wrangler CLI]: https://developers.cloudflare.com/workers/wrangler/
+[rclone]: https://rclone.org/
 

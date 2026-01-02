@@ -1,14 +1,19 @@
-compatibility_date = "2023-10-16"
+name = "infuse-artwork-webdav"
 main = "src/index.ts"
-name = "r2-webdav"
-
+compatibility_date = "2025-12-22"
 compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+# Custom domain (auto-creates DNS)
+routes = [
+  { pattern = "artwork.andrewe.dev", custom_domain = true }
+]
 
 # Bind an R2 Bucket. Use R2 to store arbitrarily large blobs of data, such as files.
 # Docs: https://developers.cloudflare.com/r2/api/workers/workers-api-usage/
 [[r2_buckets]]
-binding = "bucket" # <~ valid JavaScript variable name
-bucket_name = "webdav"
+binding = "bucket"
+bucket_name = "infuse-artwork"
 
 # Docs: https://developers.cloudflare.com/workers/observability/logs/workers-logs/#enable-workers-logs
 [observability]

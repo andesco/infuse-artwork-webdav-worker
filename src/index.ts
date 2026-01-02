@@ -78,6 +78,8 @@ function fromR2Object(object: R2Object | null | undefined): DavProperties {
 function make_resource_path(request: Request): string {
 	let path = new URL(request.url).pathname.slice(1);
 	path = path.endsWith('/') ? path.slice(0, -1) : path;
+	// Decode URL-encoded characters (e.g., %20 -> space)
+	path = decodeURIComponent(path);
 	return path;
 }
 
@@ -94,22 +96,103 @@ async function handle_get(request: Request, bucket: R2Bucket): Promise<Response>
 	let resource_path = make_resource_path(request);
 
 	if (request.url.endsWith('/')) {
-		let page = '',
-			prefix = resource_path;
+		let foldersHTML = '';
+		let filesHTML = '';
+		let prefix = resource_path;
+
 		if (resource_path !== '') {
-			page += `<a href="../">..</a><br>`;
 			prefix = `${resource_path}/`;
 		}
 
-		for await (const object of listAll(bucket, prefix)) {
-			if (object.key === resource_path) {
-				continue;
+		// Get folders and files from R2
+		let folders: string[] = [];
+		let files: { key: string; name: string; isImage: boolean; contentType?: string }[] = [];
+		let cursor: string | undefined = undefined;
+
+		do {
+			const r2_objects = await bucket.list({
+				prefix: prefix,
+				delimiter: '/',
+				cursor: cursor,
+				// @ts-ignore
+				include: ['httpMetadata', 'customMetadata'],
+			});
+
+			// Collect folders (delimitedPrefixes)
+			if (r2_objects.delimitedPrefixes) {
+				folders.push(...r2_objects.delimitedPrefixes);
 			}
-			let href = `/${object.key + (object.customMetadata?.resourcetype === '<collection />' ? '/' : '')}`;
-			page += `<a href="${href}">${object.httpMetadata?.contentDisposition ?? object.key.slice(prefix.length)}</a><br>`;
+
+			// Collect files (objects)
+			for (const object of r2_objects.objects) {
+				if (object.key === resource_path) {
+					continue;
+				}
+				let fileName = object.httpMetadata?.contentDisposition ?? object.key.slice(prefix.length);
+				let isImage = object.httpMetadata?.contentType?.startsWith('image/');
+				files.push({ key: object.key, name: fileName, isImage });
+			}
+
+			if (r2_objects.truncated) {
+				cursor = r2_objects.cursor;
+			} else {
+				cursor = undefined;
+			}
+		} while (cursor);
+
+		// Sort folders alphabetically
+		folders.sort((a, b) => a.localeCompare(b));
+
+		// Sort files alphabetically
+		files.sort((a, b) => a.name.localeCompare(b.name));
+
+		// Generate HTML for folders
+		for (const folderPrefix of folders) {
+			const folderName = folderPrefix.slice(prefix.length, -1); // Remove prefix and trailing /
+			const href = `/${folderPrefix}`;
+			foldersHTML += `<div class="folder-item"><a href="${href}">📁 <span>${folderName}</span></a></div>`;
 		}
+
+		// Generate HTML for files
+		for (const file of files) {
+			const href = `/${file.key}`;
+			if (file.isImage) {
+				filesHTML += `<div class="item"><a href="${href}"><img src="${href}" alt="${file.name}" class="thumbnail"><span>${file.name}</span></a></div>`;
+			} else {
+				filesHTML += `<div class="file-item"><a href="${href}">📄 <span>${file.name}</span></a></div>`;
+			}
+		}
+
+		// Build the page with breadcrumb, folders, then files
+		let page = '';
+		if (resource_path !== '') {
+			// Build breadcrumb with each path level as a folder-item
+			const pathParts = resource_path.split('/').filter(part => part !== '');
+			let breadcrumbHTML = '<div class="breadcrumb">';
+
+			// Root level
+			breadcrumbHTML += `<div class="folder-item"><a href="/">📁 <span>Infuse Artwork</span></a></div>`;
+
+			// Each subfolder level
+			let currentPath = '';
+			for (const part of pathParts) {
+				currentPath += (currentPath ? '/' : '') + part;
+				breadcrumbHTML += `<div class="folder-item"><a href="/${currentPath}/">📁 <span>${part}</span></a></div>`;
+			}
+
+			breadcrumbHTML += '</div>';
+			page += breadcrumbHTML;
+		} else {
+			// Show WebDAV and GitHub links on root page
+			page += `<div class="info-links">
+				<div class="info-link"><a href="webdavs://artwork.andrewe.dev/"><code>webdavs://artwork.andrewe.dev/</code></a></div>
+				<div class="info-link"><a href="https://github.com/andesco/infuse-artwork-webdav-worker" target="_blank"><code>https://github.com/andesco/infuse-artwork-webdav-worker</code></a></div>
+			</div>`;
+		}
+		page += foldersHTML + filesHTML;
+
 		// 定义模板
-		var pageSource = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>R2Storage</title><style>*{box-sizing:border-box;}body{padding:10px;font-family:'Segoe UI','Circular','Roboto','Lato','Helvetica Neue','Arial Rounded MT Bold','sans-serif';}a{display:inline-block;width:100%;color:#000;text-decoration:none;padding:5px 10px;cursor:pointer;border-radius:5px;}a:hover{background-color:#60C590;color:white;}a[href="../"]{background-color:#cbd5e1;}</style></head><body><h1>R2 Storage</h1><div>${page}</div></body></html>`;
+		var pageSource = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Infuse Artwork</title><style>*{box-sizing:border-box;}body{padding:20px;font-family:'Segoe UI','Circular','Roboto','Lato','Helvetica Neue','Arial Rounded MT Bold','sans-serif';background:#f5f5f5;}.item{display:inline-block;margin:10px;text-align:center;}.item a{display:block;padding:10px;background:white;border-radius:8px;text-decoration:none;color:#333;transition:transform 0.2s,box-shadow 0.2s;}.item a:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.15);}.thumbnail{max-width:200px;max-height:200px;display:block;margin:0 auto 10px;border-radius:4px;}.item span{display:block;font-size:14px;color:#666;}.folder-item,.file-item{display:block;margin:5px 0;}.folder-item a,.file-item a{display:block;padding:10px 15px;background:white;border-radius:5px;text-decoration:none;color:#333;transition:background-color 0.2s;}.folder-item a:hover{background-color:#e3f2fd;}.file-item a:hover{background-color:#fff3e0;}.folder-item a span,.file-item a span{margin-left:5px;}.breadcrumb{margin-bottom:20px;}.breadcrumb .folder-item{background:#f8f9fa;}.breadcrumb .folder-item:not(:first-child){margin-left:2em;}.info-links{margin-bottom:20px;}.info-link{margin:8px 0;}.info-link a{text-decoration:none;}.info-link code{display:inline-block;background:#f0f0f0;padding:8px 12px;border-radius:4px;font-family:monospace;font-size:14px;color:#333;border:1px solid #ddd;}.info-link a:hover code{background:#e3f2fd;border-color:#1976d2;}h1{color:#333;margin-bottom:20px;}</style></head><body><h1>Infuse Artwork</h1><div>${page}</div></body></html>`;
 
 		return new Response(pageSource, {
 			status: 200,
@@ -762,8 +845,13 @@ export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		const { bucket } = env;
 
+		// Allow public read-only access (GET, HEAD, PROPFIND)
+		// Require authentication for write operations
+		const readOnlyMethods = ['OPTIONS', 'GET', 'HEAD', 'PROPFIND'];
+		const requiresAuth = !readOnlyMethods.includes(request.method);
+
 		if (
-			request.method !== 'OPTIONS' &&
+			requiresAuth &&
 			!is_authorized(request.headers.get('Authorization') ?? '', env.USERNAME, env.PASSWORD)
 		) {
 			return new Response('Unauthorized', {
