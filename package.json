@@ -1,6 +1,21 @@
 {
-	"name": "r2-webdav",
-	"version": "0.0.0",
+	"name": "infuse-artwork-webdav-worker",
+	"version": "1.0.0",
+	"description": "Public WebDAV server hosting custom artwork images for Infuse",
+	"homepage": "https://artwork.andrewe.dev",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/andesco/infuse-artwork-webdav-worker.git"
+	},
+	"keywords": [
+		"webdav",
+		"infuse",
+		"cloudflare-workers",
+		"r2",
+		"artwork"
+	],
+	"author": "Andrew Escobar",
+	"license": "MIT",
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",
