@@ -32,7 +32,7 @@ Using custom artwork with Infuse:
 ### Prerequisites
 
 - [Wrangler CLI] installed
-- [rclone] installed (`brew install rclone`)
+- [rclone] installed: `brew install rclone`
 - Cloudflare account with Workers and R2 enabled
 - Node.js 18+ and npm
 
@@ -79,9 +79,9 @@ wrangler deploy
 
 ### Sync Local Folder to R2
 
-Use rclone for true synchronization (handles adds, updates, deletes, and renames):
+Use `rclone` for true synchronization (handles adds, updates, deletes, and renames):
 
-#### Setup rclone (one-time)
+#### Setup `rclone`
 
 1. Get your Cloudflare Account ID:
    ```bash
@@ -93,7 +93,7 @@ Use rclone for true synchronization (handles adds, updates, deletes, and renames
    - Permissions: Admin Read & Write
    - Copy: **Access Key ID** and **Secret Access Key**
 
-3. Configure rclone:
+3. Configure `rclone`:
    ```bash
    rclone config
    ```
@@ -117,7 +117,7 @@ rclone sync infuse-artwork/ r2:infuse-artwork -v
 ```
 
 > [!Note]
-> `rclone sync` makes the R2 bucket identical to your local folder - it will **delete** files in R2 that do not exist locally. Use the `--dry-run` flag to see what will change when syncing:
+> `rclone sync` makes the R2 bucket identical to your local folder and will **delete** remote files that do not exist locally. Use the `--dry-run` flag to see what will change when syncing:
 > ```
 > rclone sync infuse-artwork/ r2:infuse-artwork --dry-run -v
 > ```
@@ -163,17 +163,26 @@ npm run dev
 
 ### Testing
 
+test HTML directory listing:
 ```bash
-# test HTML directory listing:
 curl https://infuse-artwork-webdav.andrewe.workers.dev/
-# test specific image:
+```
+
+test specific image:
+```bash
 curl -I https://infuse-artwork-webdav.andrewe.workers.dev/cast.png
-# test WebDAV PROPFIND:
+```
+
+test WebDAV PROPFIND:
+```bash
 curl -X PROPFIND https://infuse-artwork-webdav.andrewe.workers.dev/ \
   -H "Depth: 1" \
   -H "Content-Type: text/xml" \
   --data '<?xml version="1.0"?><propfind xmlns="DAV:"><prop><resourcetype/><getcontentlength/><getlastmodified/></prop></propfind>'
-# verify write protection (401):
+```
+
+verify write protection (401):
+```bash
 curl -X PUT https://infuse-artwork-webdav.andrewe.workers.dev/test.txt \
   -H "Content-Type: text/plain" \
   --data "test"
@@ -198,7 +207,7 @@ curl -X PUT https://infuse-artwork-webdav.andrewe.workers.dev/test.txt \
 - **storage**: Cloudflare R2
 - **framework**: [r2-webdav]
 
-### Modifications from Original
+### Modifications to `r2-webdav`
 
 This deployment includes a modification to [r2-webdav] to enable public read-only access:
 
@@ -225,7 +234,7 @@ if (
 
 ## License
 
-Based on abersheeran/[r2-webdav].
+The project is based on abersheeran/[r2-webdav].
 
 [Infuse]: https://firecore.com/infuse
 [r2-webdav]: https://github.com/abersheeran/r2-webdav
