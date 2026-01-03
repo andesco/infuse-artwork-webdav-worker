@@ -21,7 +21,7 @@ Using custom artwork with Infuse:
 
 1. Settings → Shares → Add Share → WebDAV
 2. Server: \
-`https://infuse-artwork.andrewe.dev` or \ `https://infuse-artwork-webdav.andrewe.workers.dev`
+`https://infuse-artwork.andrewe.dev`
 3. Advanced: Auto Scan: Off
 4. Save
 
