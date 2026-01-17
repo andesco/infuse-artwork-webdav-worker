@@ -9,21 +9,30 @@ This public WebDAV endpoint serves custom artwork for [Infuse], allowing you to 
   <img src="./docs/images/link-atv.png" alt="Link artwork" width="200" />
 </p>
 
-## Infuse Documentation
+## Using with Infuse
+
+### Documentation
 
 Using custom artwork with Infuse:
 - [Adding Custom Favorite Artwork (tvOS)](https://support.firecore.com/hc/en-us/articles/360003185773-Adding-Custom-Favorite-Artwork-tvOS)
 - [Overriding Artwork and Metadata](https://support.firecore.com/hc/en-us/articles/4405042929559-Overriding-Artwork-and-Metadata)
 
-## Using with Infuse
-
-### Adding as a Network Share
+### Add a Network Share
 
 1. Settings → Shares → Add Share → WebDAV
 2. Server: \
 `https://infuse-artwork.andrewe.dev`
 3. Advanced: Auto Scan: Off
 4. Save
+
+### Change Artwork
+
+1. Long-press and choose Select Artwork.
+2. Select a WebDAV share.
+3. Select an image file.
+
+> [!NOTE]
+> Infuse only discovers artwork at the WebDAV root. This project keeps a hierarchical folder structure in the repository and Cloudflare R2, but presents a flattened root view where nested paths are exposed as `folder.filename-details.ext`
 
 ## Deployment
 
@@ -240,4 +249,3 @@ The project is based on abersheeran/[r2-webdav].
 [r2-webdav]: https://github.com/abersheeran/r2-webdav
 [Wrangler CLI]: https://developers.cloudflare.com/workers/wrangler/
 [rclone]: https://rclone.org/
-

@@ -203,6 +203,15 @@ async function handle_get(request: Request, bucket: R2Bucket): Promise<Response>
 			onlyIf: request.headers,
 			range: request.headers,
 		});
+		if (object === null && resource_path !== '' && !resource_path.includes('/')) {
+			const resolvedKey = await resolve_flattened_key(bucket, resource_path);
+			if (resolvedKey) {
+				object = await bucket.get(resolvedKey, {
+					onlyIf: request.headers,
+					range: request.headers,
+				});
+			}
+		}
 
 		let isR2ObjectBody = (object: R2Object | R2ObjectBody): object is R2ObjectBody => {
 			return 'body' in object;
@@ -373,7 +382,7 @@ async function handle_mkcol(request: Request, bucket: R2Bucket): Promise<Respons
 	return new Response('', { status: 201 });
 }
 
-function generate_propfind_response(object: R2Object | null): string {
+function generate_propfind_response(object: R2Object | null, hrefOverride?: string): string {
 	if (object === null) {
 		return `
 	<response>
@@ -390,7 +399,9 @@ function generate_propfind_response(object: R2Object | null): string {
 	</response>`;
 	}
 
-	let href = `/${object.key + (object.customMetadata?.resourcetype === '<collection />' ? '/' : '')}`;
+	let href =
+		hrefOverride ??
+		`/${object.key + (object.customMetadata?.resourcetype === '<collection />' ? '/' : '')}`;
 	return `
 	<response>
 		<href>${href}</href>
@@ -404,6 +415,22 @@ function generate_propfind_response(object: R2Object | null): string {
 			<status>HTTP/1.1 200 OK</status>
 		</propstat>
 	</response>`;
+}
+
+function flatten_key(key: string): string {
+	return key.replaceAll('/', '.');
+}
+
+async function resolve_flattened_key(bucket: R2Bucket, flatName: string): Promise<string | null> {
+	for await (let object of listAll(bucket, '', true)) {
+		if (object.customMetadata?.resourcetype === '<collection />') {
+			continue;
+		}
+		if (flatten_key(object.key) === flatName) {
+			return object.key;
+		}
+	}
+	return null;
 }
 
 async function handle_propfind(request: Request, bucket: R2Bucket): Promise<Response> {
@@ -436,6 +463,17 @@ async function handle_propfind(request: Request, bucket: R2Bucket): Promise<Resp
 					for await (let object of listAll(bucket, prefix)) {
 						page += generate_propfind_response(object);
 					}
+					if (resource_path === '') {
+						for await (let object of listAll(bucket, '', true)) {
+							if (object.customMetadata?.resourcetype === '<collection />') {
+								continue;
+							}
+							if (!object.key.includes('/')) {
+								continue;
+							}
+							page += generate_propfind_response(object, `/${flatten_key(object.key)}`);
+						}
+					}
 				}
 				break;
 			case 'infinity':
@@ -443,6 +481,17 @@ async function handle_propfind(request: Request, bucket: R2Bucket): Promise<Resp
 					let prefix = resource_path === '' ? resource_path : resource_path + '/';
 					for await (let object of listAll(bucket, prefix, true)) {
 						page += generate_propfind_response(object);
+					}
+					if (resource_path === '') {
+						for await (let object of listAll(bucket, '', true)) {
+							if (object.customMetadata?.resourcetype === '<collection />') {
+								continue;
+							}
+							if (!object.key.includes('/')) {
+								continue;
+							}
+							page += generate_propfind_response(object, `/${flatten_key(object.key)}`);
+						}
 					}
 				}
 				break;
